@@ -2,6 +2,10 @@
 
 ## [1.3.0] - unreleased
 
+### Added
+
+- Add environment variable `WSLGIT_WINDOWS_GIT` to specify a Windows Git executable.
+  This enables bypassing WSL completely for repositories on Windows filesystems. 
 
 
 ## [1.2.0] - 2022-12-30
