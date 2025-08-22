@@ -7,6 +7,10 @@
 - Add environment variable `WSLGIT_WINDOWS_GIT` to specify a Windows Git executable.
   This enables bypassing WSL completely for repositories on Windows filesystems. 
 
+### Fixed
+
+- Escape special character `$` in filenames (#145)
+
 
 ## [1.2.0] - 2022-12-30
 
