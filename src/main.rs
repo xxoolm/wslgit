@@ -2,14 +2,16 @@ use std::env;
 
 use std::fs::OpenOptions;
 use std::io::{self, Write};
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::os::windows::process::CommandExt;
+use std::sync::LazyLock;
 
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
 use regex::bytes::Regex;
+use regex::Regex as StrRegex;
 
 mod fork;
 mod wsl;
@@ -163,8 +165,29 @@ fn translate_path_to_win(line: &[u8]) -> Vec<u8> {
     line.to_vec()
 }
 
+fn escape_dollar_but_not_path_translation(haystack: &str) -> String {
+    static DOLLAR_AND_FOLLOWING_RE: LazyLock<StrRegex> = LazyLock::new(|| {
+        StrRegex::new(r"\$([\(\)\w]*)").expect("Failed to compile DOLLAR_AND_FOLLOWING_RE regex")
+    });
+    let mut escaped = String::with_capacity(haystack.len());
+    let mut last_match = 0;
+    for m in DOLLAR_AND_FOLLOWING_RE.find_iter(haystack) {
+        escaped.push_str(&haystack[last_match..m.start()]);
+        let m_str = m.as_str();
+        if m_str.starts_with("$(wslpath") {
+            escaped.push_str(m_str);
+        } else {
+            escaped.push_str(&m_str.replace("$", "\\$"));
+        }
+        last_match = m.end();
+    }
+    escaped.push_str(&haystack[last_match..]);
+    escaped
+}
+
 fn escape_characters(arg: String) -> String {
-    arg.replace("$", "\\$")
+    let escaped = escape_dollar_but_not_path_translation(&arg);
+    escaped
         .replace("\n", "$'\n'")
         .replace("\"", "\\\"")
         .replace("<", "\\<")
@@ -394,20 +417,19 @@ fn main() {
             if let Ok(windows_git) = env::var("WSLGIT_WINDOWS_GIT") {
                 let status;
                 let mut windows_git_proc_setup = Command::new(windows_git.clone());
-                
+
                 windows_git_proc_setup.args(&args);
                 windows_git_proc_setup.creation_flags(CREATE_NO_WINDOW);
-                
+
                 if enable_logging() {
                     log(format!("running Windows git {}", windows_git));
                     log_arguments(&args);
                 }
-                
-                status = windows_git_proc_setup
-                    .status()
-                    .expect(&format!("Failed to execute command '{}' {:?}",
-                        &windows_git,
-                        args));
+
+                status = windows_git_proc_setup.status().expect(&format!(
+                    "Failed to execute command '{}' {:?}",
+                    &windows_git, args
+                ));
 
                 // forward any exit code
                 if let Some(exit_code) = status.code() {
@@ -578,6 +600,13 @@ mod tests {
         assert_eq!(
             super::escape_characters("file$with$multiple$dollars.txt".to_string()),
             "file\\$with\\$multiple\\$dollars.txt"
+        );
+        // Test embedded path translation is not escaped
+        assert_eq!(
+            super::escape_characters(
+                "commit --file $(wslpath '\\wsl.localhost\\test\\$commit.txt $".to_string()
+            ),
+            "commit --file $(wslpath '\\wsl.localhost\\test\\\\$commit.txt \\$"
         );
         // Test combination of dollar signs and newlines
         assert_eq!(
