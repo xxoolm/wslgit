@@ -1,7 +1,7 @@
 use std::env;
 
 use std::fs::OpenOptions;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -395,6 +395,11 @@ fn main() {
         ));
     }
 
+    let have_terminal = {
+        let stdin = io::stdin();
+        stdin.is_terminal()
+    };
+
     let mut cmd_args = Vec::new();
     let mut git_args: Vec<String> = vec![String::from("git")];
     git_args.extend(env::args().skip(1).map(format_argument));
@@ -419,7 +424,9 @@ fn main() {
                 let mut windows_git_proc_setup = Command::new(windows_git.clone());
 
                 windows_git_proc_setup.args(&args);
-                windows_git_proc_setup.creation_flags(CREATE_NO_WINDOW);
+                if !have_terminal {
+                    windows_git_proc_setup.creation_flags(CREATE_NO_WINDOW);
+                }
 
                 if enable_logging() {
                     log(format!("running Windows git {}", windows_git));
@@ -457,8 +464,10 @@ fn main() {
 
     // setup the git subprocess launched inside WSL
     let mut git_proc_setup = Command::new("wsl");
-    git_proc_setup.creation_flags(CREATE_NO_WINDOW);
     git_proc_setup.args(&cmd_args);
+    if !have_terminal {
+        git_proc_setup.creation_flags(CREATE_NO_WINDOW);
+    }
 
     let status;
 
