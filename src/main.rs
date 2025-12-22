@@ -165,7 +165,7 @@ fn translate_path_to_win(line: &[u8]) -> Vec<u8> {
     line.to_vec()
 }
 
-fn escape_dollar_but_not_path_translation(haystack: &str) -> String {
+fn escape_dollar_but_not_env_cmds(haystack: &str) -> String {
     static DOLLAR_AND_FOLLOWING_RE: LazyLock<StrRegex> = LazyLock::new(|| {
         StrRegex::new(r"\$([\(\)\w]*)").expect("Failed to compile DOLLAR_AND_FOLLOWING_RE regex")
     });
@@ -174,7 +174,10 @@ fn escape_dollar_but_not_path_translation(haystack: &str) -> String {
     for m in DOLLAR_AND_FOLLOWING_RE.find_iter(haystack) {
         escaped.push_str(&haystack[last_match..m.start()]);
         let m_str = m.as_str();
-        if m_str.starts_with("$(wslpath") {
+        if m_str.starts_with("$(wslpath")
+            || m_str.starts_with("$(env")
+            || m_str.starts_with("$(printenv")
+        {
             escaped.push_str(m_str);
         } else {
             escaped.push_str(&m_str.replace("$", "\\$"));
@@ -186,7 +189,7 @@ fn escape_dollar_but_not_path_translation(haystack: &str) -> String {
 }
 
 fn escape_characters(arg: String) -> String {
-    let escaped = escape_dollar_but_not_path_translation(&arg);
+    let escaped = escape_dollar_but_not_env_cmds(&arg);
     escaped
         .replace("\n", "$'\n'")
         .replace("\"", "\\\"")
