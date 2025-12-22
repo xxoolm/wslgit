@@ -1,6 +1,6 @@
 # WSLGit Changelog
 
-## [1.3.0] - unreleased
+## [1.3.0] - 2025-12-22
 
 ### Added
 
@@ -10,6 +10,7 @@
 ### Fixed
 
 - Escape special character `$` in filenames (#145)
+- Prevent flashing console window when launched from GUI process (#146)
 
 
 ## [1.2.0] - 2022-12-30
