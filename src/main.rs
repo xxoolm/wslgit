@@ -167,14 +167,15 @@ fn translate_path_to_win(line: &[u8]) -> Vec<u8> {
 
 fn escape_dollar_but_not_env_cmds(haystack: &str) -> String {
     static DOLLAR_AND_FOLLOWING_RE: LazyLock<StrRegex> = LazyLock::new(|| {
-        StrRegex::new(r"\$([\(\)\w]*)").expect("Failed to compile DOLLAR_AND_FOLLOWING_RE regex")
+        StrRegex::new(r"\$([\(\)\w\\]*)").expect("Failed to compile DOLLAR_AND_FOLLOWING_RE regex")
     });
     let mut escaped = String::with_capacity(haystack.len());
     let mut last_match = 0;
     for m in DOLLAR_AND_FOLLOWING_RE.find_iter(haystack) {
         escaped.push_str(&haystack[last_match..m.start()]);
         let m_str = m.as_str();
-        if m_str.starts_with("$(wslpath")
+        if m_str.starts_with("$\\")
+            || m_str.starts_with("$(wslpath")
             || m_str.starts_with("$(env")
             || m_str.starts_with("$(printenv")
         {
@@ -860,6 +861,14 @@ mod tests {
         assert_eq!(
             format_argument("path\\to\\nonexisting\\file.txt".to_string()),
             "path/to/nonexisting/file.txt"
+        );
+    }
+
+    #[test]
+    fn do_not_escape_dollar_in_pathname() {
+        assert_eq!(
+            format_argument(r##"\\wsl$\Debian\home"##.to_string()),
+            r##""$(wslpath '\\wsl$\Debian\home')""##
         );
     }
 
