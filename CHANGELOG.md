@@ -1,5 +1,13 @@
 # WSLGit Changelog
 
+
+## [1.3.1] - 2026-05-21
+
+### Fixed
+
+- Do not escape $ before backslash (#149)
+
+
 ## [1.3.0] - 2025-12-22
 
 ### Added
@@ -213,3 +221,4 @@
 [1.1.1]: https://github.com/andy-5/wslgit/releases/tag/v1.1.1
 [1.2.0]: https://github.com/andy-5/wslgit/releases/tag/v1.2.0
 [1.3.0]: https://github.com/andy-5/wslgit/releases/tag/v1.3.0
+[1.3.1]: https://github.com/andy-5/wslgit/releases/tag/v1.3.1
